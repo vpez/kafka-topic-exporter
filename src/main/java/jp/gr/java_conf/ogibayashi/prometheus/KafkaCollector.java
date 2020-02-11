@@ -1,19 +1,19 @@
 package jp.gr.java_conf.ogibayashi.prometheus;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.prometheus.client.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.prometheus.client.Collector;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import java.util.Collections;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.TreeSet;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TimeZone;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class KafkaCollector extends Collector {
     private static final Logger LOG = LoggerFactory.getLogger(KafkaCollector.class);
@@ -94,8 +94,29 @@ public class KafkaCollector extends Collector {
                 labelValues.add(entry.getValue());
             }
         }
-        MetricFamilySamples.Sample sample = new MetricFamilySamples.Sample(metricName, labelNames, labelValues, logEntry.getValue(), logEntry.getTimestamp());
+        MetricFamilySamples.Sample sample = new MetricFamilySamples.Sample(metricName, 
+            labelNames, labelValues, 
+            Double.valueOf(logEntry.getValue()), 
+            getTimestamp(logEntry.getTimestamp()));
         LOG.debug("sample: {}", sample );
         return sample; 
+    }
+
+    private long getTimestamp(String timestamp) {
+        String ISO_DATE_FORMAT_ZERO_OFFSET = "yyyy-MM-dd'T'HH:mm:ss'Z'";
+        String UTC_TIMEZONE_NAME = "UTC";
+
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(ISO_DATE_FORMAT_ZERO_OFFSET);
+        simpleDateFormat.setTimeZone(TimeZone.getTimeZone(UTC_TIMEZONE_NAME));
+        
+        long value = 0;
+
+        try {
+            value = simpleDateFormat.parse(timestamp).getTime();
+        } catch(ParseException e) {
+            LOG.error(e.getMessage(), e);
+        }
+
+        return value;
     }
 }
