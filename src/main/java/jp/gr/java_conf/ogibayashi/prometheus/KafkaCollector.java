@@ -35,14 +35,21 @@ public class KafkaCollector extends Collector {
     
     public void add(String topic, String recordValue, LocalDateTime datetime) {
         LOG.debug("add: {}, {}", topic, recordValue);
-        try {          
+        try {
             KafkaExporterLogEntry record = mapper.readValue(recordValue, KafkaExporterLogEntry.class);
-            String metricName = topic.replaceAll("\\.","_") + "_" + record.getName().replaceAll("\\.","_");
+
+            String metricName = record.getName().replaceAll("\\.","_");
+
+            // Add the topic name as prefix only if specified by the configuration
+            if (pc.getExporterTopicPrefix()) {
+                metricName = topic.replaceAll("\\.","_") + "_" + metricName;
+            }
+
             if (metricName.startsWith("_")) {
               metricName = metricName.substring(1);
             }
             if(! metricEntries.containsKey(metricName)){
-                metricEntries.put(metricName, new ConcurrentHashMap<KafkaExporterLogEntry, LocalDateTime>());
+                metricEntries.put(metricName, new ConcurrentHashMap<>());
             }
 
             Map<KafkaExporterLogEntry, LocalDateTime> entry = metricEntries.get(metricName);
@@ -65,9 +72,9 @@ public class KafkaCollector extends Collector {
     
     public List<MetricFamilySamples> collect(LocalDateTime current_timestamp) {
         
-        List<MetricFamilySamples> mfsList = new ArrayList<MetricFamilySamples>();
+        List<MetricFamilySamples> mfsList = new ArrayList<>();
         for(Map.Entry<String, Map<KafkaExporterLogEntry, LocalDateTime>> e: metricEntries.entrySet()){
-            List<MetricFamilySamples.Sample> samples = new ArrayList<MetricFamilySamples.Sample>();
+            List<MetricFamilySamples.Sample> samples = new ArrayList<>();
             for(Map.Entry<KafkaExporterLogEntry, LocalDateTime> le: e.getValue().entrySet()){
                 if (expire != 0 && le.getValue().plusSeconds(expire).isBefore(current_timestamp)) {
                     e.getValue().remove(le.getKey());
@@ -86,8 +93,8 @@ public class KafkaCollector extends Collector {
     }
 
     public MetricFamilySamples.Sample generateSample(String metricName, KafkaExporterLogEntry logEntry) {
-        ArrayList<String> labelNames = new ArrayList<String>();
-        ArrayList<String> labelValues = new ArrayList<String>();
+        ArrayList<String> labelNames = new ArrayList<>();
+        ArrayList<String> labelValues = new ArrayList<>();
         if (logEntry.getLabels() != null) {
             for(Map.Entry<String, String> entry: logEntry.getLabels().entrySet()){
                 labelNames.add(entry.getKey());

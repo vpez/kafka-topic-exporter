@@ -24,10 +24,11 @@ public class PropertyConfig {
         CONSUL_KAFKA_SERVICENAME("consul.kafka.servicename"),
         BOOTSTRAP_SERVERS("bootstrap.servers"),
         EXPORTER_PORT("exporter.port"),
+        EXPORTER_TOPIC_PREFIX("exporter.topic.prefix"),
         EXPORTER_METRIC_EXPIRE("exporter.metric.expire.seconds"),
         KAFKA_CONSUMER_TOPICS("kafka.consumer.topics"),
         KAKFA_CONSUMER_REMOVEPREFIX("kafka.consumer.remove.prefix");
-        
+
         public final String key;
 
         Constants(String key) {
@@ -104,13 +105,17 @@ public class PropertyConfig {
     }
 
     public long getMetricExpire() {
-        return (long)Long.parseLong(get(Constants.EXPORTER_METRIC_EXPIRE.key, "0"));
+        return Long.parseLong(get(Constants.EXPORTER_METRIC_EXPIRE.key, "0"));
     }
 
     public int getExporterPort() {
-        return(getInt(PropertyConfig.Constants.EXPORTER_PORT.key, 9185));
+        return getInt(Constants.EXPORTER_PORT.key, 9185);
     }
-    
+
+    public boolean getExporterTopicPrefix() {
+        return getBoolean(Constants.EXPORTER_TOPIC_PREFIX.key, false);
+    }
+
     public String get(String key) {
         String value = props.getProperty(key);
         if (value == null)
@@ -141,14 +146,14 @@ public class PropertyConfig {
     }
 
     public boolean getBoolean(String key) {
-        return Boolean.valueOf(get(key)).booleanValue();
+        return Boolean.parseBoolean(get(key));
     }
 
     public boolean getBoolean(String key, boolean defaultValue) {
         String value = props.getProperty(key);
         if (value == null)
             return defaultValue;
-        return Boolean.valueOf(value).booleanValue();
+        return Boolean.parseBoolean(value);
     }
 
 
